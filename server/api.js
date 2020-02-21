@@ -1,52 +1,113 @@
-const fm = require("./file_system/file_manger");
 const domain = require("./domain/domain");
+const storage = require('./storage_manager')
+const {assert, isUniqueGoal, isUniqueTask, timeIsFree} = require("./assertions")
 
-// API functions
+function getGoal(name) {}
+function getTask(name, goal = null) {}
 
 // Creating and adding
+/** Creates Goal */
+function createGoal(name, deadline = null, description = "", image = null) {
+  // goals should have unique name
+  assert(isUniqueGoal(name), `Goal with name ${name} already exists.`);
 
-/** Create Goal (lifetime/un-scheduled) */
-/** Create Goal (staged) */
-function createGoal(name, stage = null, description = "", tasks = [], image = null, subgoals = [], supergoals = []) {
-  console.log("Creating new goal with: " + name);
-  // todo: check requirements
-  const goal = new domain.Goal(name, stage, description, tasks, image, subgoals, supergoals);
-  console.log("Created new goal " + goal);
+  const goal = new domain.Goal(name, deadline, description, image);
+  storage.goals.push(goal);
+  return goal;
 }
 
-/** Create Sub-goal */
+/** Create Task (hierarchy) / Add task with no goal into a schedule. */
+function createTaskSingle(name, time = null, goal = null) {
+  const task = new domain.SingleTask(name, time);
+
+  if (!goal) addTaskUnclassified(task);
+  else addTask(goal, task);
+
+  return task;
+}
+
+/** Creates periodic task */
+function createTaskPeriodic(name, schedule = null, goal = null) {
+  const task = new domain.PeriodicTask(name, goal, schedule);
+
+  if (!goal) addTaskUnclassified(task);
+  else addTask(goal, task);
+
+  return task;
+}
+
+/** Adds a task to a goal */
+function addTask(goal, task) {
+  assert(!goal.containsTask(task), `Goal already includes task ${task}`);
+  goal.tasks.push(task);
+}
+
+/** Adds an unclassified task to storage */
+function addTaskUnclassified(task) {
+  // Cannot have two same unclassified tasks
+  assert(isUniqueTask(task.name, task.time), `Unclassified task ${task} already exists`);
+  storage.tasks.push(task);
+}
+
+/** Add subgoal to a goal */
 function addSubGoal(target, subgoal) {
-  console.log("Adding sub-goal " + subgoal + " to a " + target);
-  // todo: check requirements
+  // goal cannot contain same subgoal twice (recursively)
+  assert(!target.containsSubgoal(subgoal), `Goal already contains subgoal ${subgoal}`);
+
+  // goal cannot contain subgoal, that recursively contains this goal
+  assert(!subgoal.containsSubgoal(target));
+
+  // subgoal's deadline should be earlier than the target's deadline
+  assert(subgoal.deadline < target.deadline || target.deadline == null);
+
   target.subgoals.push(subgoal);
   subgoal.supergoals.push(target);
 }
 
-/** Create Super-goal */
+/** Add supergoal to a goal */
 function addSuperGoal(target, supergoal) {
   addSubGoal(supergoal, target);
 }
 
-/** Create Task (hierarchy) / Add task with no goal into a schedule. */
-function createTaskSingle(name, goal = null, time = null) {
-  console.log("Creating new task: " + name)
-  return new domain.SingleTask(name, goal, time);
-}
-
-function createTaskPeriodic(name, goal = null, schedule = null) {
-  console.log("Creating new task: " + name + " (periodic)")
-  return new domain.PeriodicTask(name, goal, schedule);
-}
-
 /** Schedule task. */
 function scheduleTaskSingle(task, time) {
+  assert(!task.time);
   task.time = time;
 }
 
-/** Schedule task. */
+/** Schedule task periodic. */
 function scheduleTaskPeriodic(task, schedule) {
+  assert(!task.schedule);
   task.schedule = schedule;
 }
+
+/** Swap tasks' times */
+function swapTasksTime(a, b) {
+  assert(a.time && b.time)
+  const t = a.time;
+  a.time = b.time;
+  b.time = t;
+}
+
+// Edit
+function changeGoalName(goal, name) {}
+function changeGoalDeadline(goal, deadline) {}
+
+function changeGoalDetails(goal, description, image) {}
+
+function changeTaskName(goal, name) {}
+function changeTaskTime(task, time) {}
+function changeTaskSchedule(task, schedule) {}
+
+// Completion
+function completeTask(task) {}
+function completeTaskInstance(taskInstance) {}
+function uncompleteTask(task) {}
+function uncompleteTaskInstance(taskInstance) {}
+
+// Deletion
+function deleteGoal(goal) {}
+function deleteTask(task) {}
 
 module.exports = {
   createGoal,
@@ -57,6 +118,8 @@ module.exports = {
   scheduleTaskSingle,
   scheduleTaskPeriodic
 }
+
+
 
 
 

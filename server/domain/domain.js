@@ -1,7 +1,7 @@
 class Goal {
-  constructor(name, stage, description, tasks, image, subgoals, supergoals) {
+  constructor(name, deadline, description, image, tasks, subgoals, supergoals) {
     this.name = name
-    this.stage = stage
+    this.deadline = deadline
     this.description = description
     this.tasks = tasks
     this.image = image
@@ -9,13 +9,28 @@ class Goal {
     this.supergoals = supergoals
   }
 
-  toString() { return `Goal(${this.name})`; }
+  completion() {
+    return 0;
+  }
+
+  toString() {
+    return `Goal(${this.name})`;
+  }
+
+  containsSubgoal(subgoal) {
+    return false;
+  }
+
+  containsTask(task) {
+    return false;
+  }
 }
 
 class Task {
   constructor(name, goal) {
     this.name = name;
     this.goal = goal;
+    this.completion = 0;
   }
 }
 
@@ -26,6 +41,14 @@ class SingleTask extends Task {
 
     goal.tasks.push(this);
   }
+
+  complete() {
+    this.completion = 1;
+  }
+
+  uncomplete() {
+    this.completion = 1;
+  }
 }
 
 class PeriodicTask extends Task {
@@ -34,12 +57,28 @@ class PeriodicTask extends Task {
     this.schedule = schedule;
     this.instances = [];
   }
+
+  updateCompletion() {
+    this.completion = this.instances.filter(ins => ins.completed).length / this.instances.length;
+  }
 }
 
 class PeriodicTaskInstance {
   constructor(baseTask) {
     this.baseTask = baseTask;
+    this.completed = false;
   }
+
+  complete() {
+    this.completed = true;
+    this.baseTask.updateCompletion();
+  }
+
+  uncomplete() {
+    this.completed = false;
+    this.baseTask.updateCompletion();
+  }
+
 }
 
 class PeriodicSchedule {
